@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>subwayOfBudapest</title>
+    <link rel="stylesheet" href="subway.css">
+</head>
+
+<body>
+    <div id="menuDiv">
+        <label for="playerName">Player Name:</label>
+        <input type="text" id="playerName" placeholder="Enter your name">
+        <button id="startGame" disabled>startGame</button>
+        <a href="description.html" target="_blank">
+            <button id="showDesctiption">Game Discription</button>
+        </a>
+    </div>
+
+    <div id="gameDiv" style="display:none;">
+        <div id="gridContainer">
+            <table id="grid"></table>
+        </div>
+        <div id="sidebar">
+            <div id="playerNameDisplay"></div>
+            <div id="timer">Elapsed Time: 0s</div>
+            <div id="currentCard">currentCard: -</div>
+            <div id="platformType">platform: </div>
+            <div id="currentRound">Mero: </div>
+            <div id="turn">turn: -</div>
+            <div id="roundScores">round Scores: 0</div>
+            <div id="railWayScore">railWayScore: </div>
+            <div id="stationControls">
+                <button id="confirmStation" disabled>Confirm & draw next card</button>
+                <button id="skipRound" disabled>skip this turn</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
