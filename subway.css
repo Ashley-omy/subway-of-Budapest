@@ -78,3 +78,39 @@
 .selected-to {
     outline: 4px solid #E91E63;
 }
+
+/*SVG*/
+#gridContainer {
+    position: relative;
+    display: inline-block;
+}
+
+#grid {
+    border-collapse: collapse;
+}
+
+#segmentsLayer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 600px;
+    height: 600px;
+    pointer-events: none;
+}
+
+.selected-from {
+    outline: 3px solid orange;
+}
+
+.selected-to {
+    outline: 3px solid cyan;
+}
+
+/*error box*/
+#error {
+    color: red;
+}
+
+#message {
+    color: green;
+}
