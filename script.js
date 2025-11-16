@@ -60,6 +60,27 @@ const turn = document.querySelector("#turn");
 const skipRound = document.querySelector("#skipRound");
 const railWayScore = document.querySelector("#railWayScore");
 
+
+const platformCat = ['center', 'side']
+const ROUND = ['M1', 'M2', 'M3', 'M4']
+const CARDTYPES = ['A', 'B', 'C', 'D']
+//manage game state centrally
+const gameState = {
+    lines: [],
+    stations: [],
+    lineOrder: [], //rounds
+    currentLineIdx: 0,
+    deck: [], //turn
+    currentCard: null,
+    segments: [], //[{lineId, fromId, toId}]
+    visitedByLine: {}, //lineId -> Set(stationId)
+    endpoints: {}, //lineId -> {a:stationId, b:stationId}
+    railwayScoreCounter: 0, //index of [0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25]
+    perRoundFP: [],
+    centerPlatformCount: 0,
+    sidePlatformCount: 0,
+};
+
 playerNameInput.addEventListener("input", () => {
     startButton.disabled = playerNameInput.value.trim().length === 0;
 });
@@ -74,6 +95,38 @@ const TYPE_COLORS = {
 };
 
 const GRID_SIZE = 10;
+
+/*read json data*/
+Promise.all([
+    fetch("stations.json").then(res => res.json()),
+    fetch("lines.json").then(res => res.json())
+]).then(([stations, lines]) => {
+    // stations: stations.json の配列
+    // lines: lines.json の配列
+    gameState.stations = stations;
+    gameState.lines = lines;
+    console.log("Fetch done:", gameState.stations, gameState.lines);
+
+    lines.forEach(line => {
+        TYPE_COLORS[line.id] = line.color;
+    });
+    drawGrid(GRID_SIZE, stations, lines);
+});
+
+startButton.addEventListener("click", () => {
+    console.log("On Start Click: gameState.lines =", gameState.lines);
+    const playerName = playerNameInput.value.trim();
+    playerNameDisplay.textContent = `player: ${playerName}`;
+    menuDiv.style.display = "none";
+    gameDiv.style.display = "flex";
+    initRound();
+    initDeck();
+    startRound(gameState.lines[0]);
+    startTimer();
+    updateCurrentCard("-");
+    updateRoundScores(0);
+});
+
 
 function startTimer() {
     startTime = Date.now(); //millisec
@@ -97,30 +150,6 @@ function updateRoundScores(score) {
 function enableConfirmStation(enable) {
     confirmBtn.disabled = !enable;
 }
-
-startButton.addEventListener("click", () => {
-    const playerName = playerNameInput.value.trim();
-    playerNameDisplay.textContent = `player: ${playerName}`;
-    menuDiv.style.display = "none";
-    gameDiv.style.display = "flex";
-    startTimer();
-    updateCurrentCard("-");
-    updateRoundScores(0);
-});
-
-/*read json data*/
-Promise.all([
-    fetch("stations.json").then(res => res.json()),
-    fetch("lines.json").then(res => res.json())
-]).then(([stations, lines]) => {
-    // stations: stations.json の配列
-    // lines: lines.json の配列
-    console.log(stations, lines);
-    lines.forEach(line => {
-        TYPE_COLORS[line.id] = line.color;
-    });
-    drawGrid(GRID_SIZE, stations, lines);
-});
 
 function drawGrid(size, stations, lines) {
     const table = document.querySelector("#grid");
@@ -166,24 +195,70 @@ function drawGrid(size, stations, lines) {
         table.appendChild(tr);
     }
 }
-/*game logic*/
-const platformCat = ['center', 'side']
-const ROUND = ['M1', 'M2', 'M3', 'M4']
-const CARDTYPES = ['A', 'B', 'C', 'D']
-//manage game state centrally
-const gameState = {
-    lineOrder: [], //rounds
-    currentLineIdx: 0,
-    deck: [], //turn
-    currentCard: null,
-    segments: [], //[{lineId, fromId, toId}]
-    visitedByLine: {}, //lineId -> Set(stationId)
-    endpoints: {}, //lineId -> {a:stationId, b:stationId}
-    railwayScoreCounter: 0, //index of [0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25]
-    perRoundFP: [],
-    centerPlatformCount: 0,
-    sidePlatformCount: 0
-};
+
+
+function shuffuleArray(arr) {
+    /*Fisher-Yates*/
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function initRound() {
+    gameState.lineOrder = shuffuleArray([...gameState.lines]);
+    gameState.currentLineIdx = 0;
+
+    console.log("gameState.lineOrder:", gameState.lineOrder);
+}
+
+
+function initDeck() {
+    const cards = [
+        { type: 'A', platform: 'side' },
+        { type: 'B', platform: 'side' },
+        { type: 'C', platform: 'side' },
+        { type: 'D', platform: 'side' },
+        { type: 'JOKER', platform: 'side' },
+        { type: 'A', platform: 'center' },
+        { type: 'B', platform: 'center' },
+        { type: 'C', platform: 'center' },
+        { type: 'D', platform: 'center' },
+        { type: 'JOKER', platform: 'center' },
+        { type: 'SWITCH', platform: 'center' }
+    ];
+    gameState.deck = shuffuleArray(cards);
+    console.log("gameState.deck:", gameState.deck);
+}
+
+/*flow controls (round and turn)*/
+function startRound(lineObj) {
+    //lineObj = {id, name, start, color ...} from lines.json
+    const lineId = lineObj.id;
+    console.log(`start round for line ${lineId}`);
+    gameState.visitedByLine[lineId] = new Set();
+    const startStationId = lineObj.start;
+    gameState.visitedByLine[lineId].add(startStationId);
+    gameState.endpoints[lineId] = {
+        a: startStationId,
+        b: null //endpoint is only one at the beggining of a round
+    };
+    currentRound.textContent = `Metro: ${lineId}`;
+    currentRound.style.backgroundColor = TYPE_COLORS[lineObj.name];
+}
+
+function drawCard() { } // returns card or null if deck empty
+function selectStation(stationId) {
+    gameState.selected = stationId;
+    enableConfirmStation(true)
+}
+function attemptPlaceSegment(stationId) {
+    // 1. find fromStation candidates (endpoints of current line)
+    // 2. validate rules
+    // 3. if ok -> placeSegment(from,to)
+}
+
 
 function endRound() {
     calRoundResult();
@@ -196,6 +271,7 @@ function calRoundResult() {
 function calResult() {
 
 }
+
 /*
 //scorings
 //PK = Number of districts this line passes through
