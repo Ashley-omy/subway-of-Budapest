@@ -70,3 +70,11 @@
     flex-direction: column;
     gap: 10px;
 }
+
+.selected-from {
+    outline: 4px solid #2196F3;
+}
+
+.selected-to {
+    outline: 4px solid #E91E63;
+}

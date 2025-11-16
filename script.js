@@ -59,7 +59,7 @@ const currentCard = document.querySelector("#currentCard");
 const turn = document.querySelector("#turn");
 const skipRound = document.querySelector("#skipRound");
 const railWayScore = document.querySelector("#railWayScore");
-
+const platformType = document.querySelector("#platformType");
 
 const platformCat = ['center', 'side']
 const ROUND = ['M1', 'M2', 'M3', 'M4']
@@ -70,6 +70,8 @@ const gameState = {
     stations: [],
     lineOrder: [], //rounds
     currentLineIdx: 0,
+    selectedFrom: null, // either of endpoints (when no switch card)
+    selectedTo: null, // new station to extend
     deck: [], //turn
     currentCard: null,
     segments: [], //[{lineId, fromId, toId}]
@@ -79,10 +81,26 @@ const gameState = {
     perRoundFP: [],
     centerPlatformCount: 0,
     sidePlatformCount: 0,
+    turn: 0,
+    isSwitch: false
 };
-
+/*eventTriggers*/
 playerNameInput.addEventListener("input", () => {
     startButton.disabled = playerNameInput.value.trim().length === 0;
+});
+
+document.querySelector("#grid").addEventListener("click", (e) => {
+    const cell = e.target.closest(".station");
+    if (!cell) return;
+
+    const stationId = cell.dataset.id;
+    if (!stationId) return;
+
+    selectStation(stationId);
+});
+
+confirmBtn.addEventListener("click", () => {
+    confirmSegment();
 });
 
 let startTime, timerInterval;
@@ -98,7 +116,7 @@ const GRID_SIZE = 10;
 
 /*read json data*/
 Promise.all([
-    fetch("stations.json").then(res => res.json()),
+    fetch("stations.json").then(res => res.json()), //fetchでhttpリクエストを送る。responseオブジェクトが返る（メタデータが入っている。）response.json()でjsonファイルを抽出する。
     fetch("lines.json").then(res => res.json())
 ]).then(([stations, lines]) => {
     // stations: stations.json の配列
@@ -121,12 +139,10 @@ startButton.addEventListener("click", () => {
     gameDiv.style.display = "flex";
     initRound();
     initDeck();
-    startRound(gameState.lines[0]);
     startTimer();
     updateCurrentCard("-");
-    updateRoundScores(0);
+    startGame();
 });
-
 
 function startTimer() {
     startTime = Date.now(); //millisec
@@ -143,8 +159,10 @@ function updateCurrentCard(cardType) {
     document.querySelector("#currentCard").textContent = `Current Card: ${cardType}`;
 }
 
-function updateRoundScores(score) {
-    document.querySelector("#roundScores").textContent = `Round Scores: ${score}`;
+function updateRoundScores(round, score) {
+    const newScore = document.createElement("div");
+    newScore.innerHTML = `round ${round}: ${score}`;
+    document.querySelector("#roundScores").appendChild(newScore);
 }
 
 function enableConfirmStation(enable) {
@@ -206,6 +224,7 @@ function shuffuleArray(arr) {
     return arr;
 }
 
+/*prepare for the first round*/
 function initRound() {
     gameState.lineOrder = shuffuleArray([...gameState.lines]);
     gameState.currentLineIdx = 0;
@@ -213,7 +232,7 @@ function initRound() {
     console.log("gameState.lineOrder:", gameState.lineOrder);
 }
 
-
+/*Initially, there are 11 cards in the deck*/
 function initDeck() {
     const cards = [
         { type: 'A', platform: 'side' },
@@ -232,7 +251,7 @@ function initDeck() {
     console.log("gameState.deck:", gameState.deck);
 }
 
-/*flow controls (round and turn)*/
+/*perpare for the new round. initialize visited lines and endpoints.*/
 function startRound(lineObj) {
     //lineObj = {id, name, start, color ...} from lines.json
     const lineId = lineObj.id;
@@ -244,21 +263,274 @@ function startRound(lineObj) {
         a: startStationId,
         b: null //endpoint is only one at the beggining of a round
     };
+    console.log(gameState.endpoints[lineId]);
     currentRound.textContent = `Metro: ${lineId}`;
     currentRound.style.backgroundColor = TYPE_COLORS[lineObj.name];
 }
 
-function drawCard() { } // returns card or null if deck empty
-function selectStation(stationId) {
-    gameState.selected = stationId;
-    enableConfirmStation(true)
-}
-function attemptPlaceSegment(stationId) {
-    // 1. find fromStation candidates (endpoints of current line)
-    // 2. validate rules
-    // 3. if ok -> placeSegment(from,to)
+function drawCard() {
+    if (gameState.deck.length === 0) {
+        updateCurrentCard("No Cards");
+        return null;
+    }
+    const card = gameState.deck.shift();
+    gameState.currentCard = card;
+
+    //renew UI
+    updateCurrentCard(card.type);
+    platformType.textContent = `Platfrom: ${card.platform}`;
+
+    console.log("Drawn card:", card);
+    return card;
 }
 
+/*this function is triggered when user click a cell. make confirmation button active.*/
+function selectStation(stationId) {
+    const lineObj = gameState.lineOrder[gameState.currentLineIdx];
+    const lineId = lineObj.id;
+    const endpoints = gameState.endpoints[lineId];
+    const fromCandidates = [endpoints.a, endpoints.b].filter(x => x !== null);
+
+    // --- STEP 1: fromStation の選択 --- //
+    if (gameState.selectedFrom === null) {
+        if (!fromCandidates.includes(stationId)) {
+            document.querySelector("#error").textContent =
+                "Select one of the endpoints as the FROM station.";
+            return;
+        }
+
+        gameState.selectedFrom = stationId;
+        document.querySelector("#error").textContent = `From station selected: ${stationId}`;
+
+        if (gameState.selectedFrom) {
+            const elFrom = document.querySelector(`div[data-id="${gameState.selectedFrom}"]`);
+            if (elFrom) elFrom.classList.add("selected-from");
+        }
+
+        return;  // toStation の選択に進む
+    }
+
+    // --- STEP 2: toStation の選択 --- //
+    if (gameState.selectedTo === null) {
+        if (stationId === gameState.selectedFrom) {
+            document.querySelector("#error").textContent =
+                "You cannot select the same station as TO.";
+            return;
+        }
+
+        gameState.selectedTo = stationId;
+        document.querySelector("#error").textContent = `To station selected: ${stationId}`;
+
+        if (gameState.selectedTo) {
+            const elTo = document.querySelector(`div[data-id="${gameState.selectedTo}"]`);
+            if (elTo) elTo.classList.add("selected-to");
+        }
+
+        enableConfirmStation(true); // Confirm ボタンを押せるようにする
+        return;
+    }
+}
+
+function confirmSegment() {
+    const from = gameState.selectedFrom;
+    const to = gameState.selectedTo;
+
+    if (!from || !to) {
+        document.querySelector("#error").textContent =
+            "Select FROM and TO stations first.";
+        return;
+    }
+
+    attemptPlaceSegment(from, to);
+
+    // リセット
+    gameState.selectedFrom = null;
+    gameState.selectedTo = null;
+    enableConfirmStation(false);
+}
+
+/*validation of a segment*/
+function attemptPlaceSegment(fromId, toId) {
+    const lineObj = gameState.lineOrder[gameState.currentLineIdx];
+    const lineId = lineObj.id;
+    const cardObj = gameState.currentCard;
+
+    if (!cardObj) {
+        document.querySelector("#error").textContent = "No card is drawn.";
+        return;
+    }
+
+    const endpoints = gameState.endpoints[lineId];
+    const fromCandidates = [endpoints.a, endpoints.b].filter(x => x !== null);
+
+    // 0. is station type valid?
+    const stationObj = gameState.stations.find(s => s.id == toId);
+    if (cardObj.type !== "JOKER") {
+        // 中央駅(30) ならカードタイプ無視で OK
+        if (toId != 30) {
+            // cardObj.type と station.type が一致していないならエラー
+            if (!stationObj || stationObj.type !== cardObj.type) {
+                document.querySelector("#error").textContent =
+                    `Selected station type (${stationObj ? stationObj.type : 'unknown'}) does not match the card type (${cardObj.type}).`;
+                return;
+            }
+        }
+    }
+
+    if (!gameState.isSwitch) {
+        // 1. fromId が endpoint である必要がある
+        if (!fromCandidates.includes(fromId)) {
+            document.querySelector("#error").textContent =
+                `Selected FROM station is not an endpoint`;
+            return;
+        }
+    }
+
+    // 2. ルールチェック
+    if (!canConnect(fromId, toId)) {
+        document.querySelector("#error").textContent = `Illegal direction / passing through`;
+        return;
+    }
+
+    if (gameState.visitedByLine[lineId].has(toId)) {
+        document.querySelector("#error").textContent = `Already visited by this line`;
+        return;
+    }
+
+    if (wouldCrossSegment(fromId, toId)) {
+        document.querySelector("#error").textContent = `Segment would cross another line`;
+        return;
+    }
+
+    // 3. OK → 線を引く
+    placeSegment(lineId, fromId, toId);
+
+    // increment turn
+    gameState.turn++;
+    turn.textContent = `turn: ${gameState.turn}`;
+
+    // increment current platform type counters in gameState
+    if (cardObj.platform === 'center') gameState.centerPlatformCount++;
+    if (cardObj.platform === 'side') gameState.sidePlatformCount++;
+}
+
+
+function canConnect(id1, id2) {
+    const s1 = gameState.stations.find(s => s.id == id1);
+    const s2 = gameState.stations.find(s => s.id == id2);
+    if (!s1 || !s2) return false;
+
+    const dx = s2.x - s1.x;
+    const dy = s2.y - s1.y;
+
+    // 1. 方向が90°または45°であること
+    const isStraight = (dx === 0 || dy === 0);
+    const isDiagonal = Math.abs(dx) === Math.abs(dy);
+    if (!isStraight && !isDiagonal) return false;
+
+    // 2. 他の駅を通過しないかチェック
+    for (const s of gameState.stations) {
+        if (s.id === id1 || s.id === id2) continue;
+
+        if (isPointOnSegment(s.x, s.y, s1, s2)) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+function isPointOnSegment(px, py, s1, s2) {
+    // 直線上にあるか（クロス積 = 0）
+    const cross = (px - s1.x) * (s2.y - s1.y) - (py - s1.y) * (s2.x - s1.x);
+    if (cross !== 0) return false;
+
+    // s1 と s2 の間にあるか（内積で判定）
+    const dot = (px - s1.x) * (s2.x - s1.x) + (py - s1.y) * (s2.y - s1.y);
+    if (dot < 0) return false;
+
+    const squaredLen = (s2.x - s1.x) ** 2 + (s2.y - s1.y) ** 2;
+    if (dot > squaredLen) return false;
+
+    return true;
+}
+
+function highlightStation(stationId, color) {
+    const el = document.querySelector(`div[data-id="${stationId}"]`);
+    if (!el) return;
+    el.style.backgroundColor = color;
+}
+
+function wouldCrossSegment(fromId, toId) {
+    const s1 = gameState.stations.find(s => s.id == fromId);
+    const s2 = gameState.stations.find(s => s.id == toId);
+
+    for (const seg of gameState.segments) {
+        const a = gameState.stations.find(s => s.id == seg.fromId);
+        const b = gameState.stations.find(s => s.id == seg.toId);
+
+        // 同じ端点は交差ではない
+        if (a.id === fromId || a.id === toId || b.id === fromId || b.id === toId) {
+            continue;
+        }
+
+        // 交差していたら禁止
+        if (linesIntersect(s1, s2, a, b)) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function linesIntersect(p1, p2, p3, p4) {
+
+    // CCW で向きを求める
+    function ccw(a, b, c) {
+        return (c.y - a.y) * (b.x - a.x) > (b.y - a.y) * (c.x - a.x);
+    }
+
+    const a = p1, b = p2, c = p3, d = p4;
+
+    // 線分が交差する条件
+    return (ccw(a, c, d) !== ccw(b, c, d)) &&
+        (ccw(a, b, c) !== ccw(a, b, d));
+}
+
+
+function placeSegment(lineId, fromId, toId) {
+    console.log(`Place segment ${fromId} -> ${toId} on ${lineId}`);
+    gameState.segments.push({
+        lineId,
+        fromId,
+        toId
+        //Property Shorthand.　キー名と変数名が同じであればこのように短縮記法が使える。
+    });
+    gameState.visitedByLine[lineId].add(toId);
+
+    // update endpoints
+    const ep = gameState.endpoints[lineId];
+    if (ep.a === fromId && ep.b == null) ep.b = toId;
+    else if (ep.b === fromId && ep.a === null) ep.a = toId;
+    else if (ep.a === fromId) ep.a = toId;
+    else if (ep.b === fromId) ep.b = toId;
+
+    // update UI
+    highlightStation(toId, TYPE_COLORS[lineId]);
+}
+
+function startGame() {
+    for (i = 0; i < gameState.lines.length; i++) {
+        while (gameState.sidePlatformCount < 5 && gameState.centerPlatformCount < 5) {
+            startRound(gameState.lineOrder[0]);
+            card = drawCard();
+            currentCard.textContent = `Current Card: ${card.type}`;
+            currentCard.textContent = `platform: ${card.platform}`;
+        }
+        endRound();
+    }
+    calResult();
+}
 
 function endRound() {
     calRoundResult();
@@ -271,117 +543,3 @@ function calRoundResult() {
 function calResult() {
 
 }
-
-/*
-//scorings
-//PK = Number of districts this line passes through
-let PK = 0;
-//PM = Number of stations it touches in the district where it has the most stations
-let PM = 0;
-//PD = Number of times it crosses the Danube
-let PD = 0;
-// railway  0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25. 
-const railwayScale = [0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25]
-let currentScaleIdx = 0;
-//FP = (PK × PM) + PD → this round’s score
-/*
-Rounds: sum of all FP values → Sum(FP) = (FP1 + FP2 + FP3 + FP4)
-Railway stations: add the final PP (railway points from the track)
-Junctions: We count how many stations are served by two different metro lines (CSP2), how many by three different lines (CSP3), and how many by all four metro lines (CSP4). Junctions with two metro lines are worth 2 points, those with three lines are worth 5 points, and those with four lines are worth 9 points (these are busy hubs, so they earn a bunch of junction points).
-Final score = Sum(FP) + PP + (2 × CSP2) + (5 × CSP3) + (9 × CSP4)
-*/
-/*
-function drawSegment() { }
-function markEndPoint() { }
-function markMiddlePoint() { }
-function markVisited() { }
-
-const platformCat = ['center', 'side']
-let conterCnt, sideCnt = 0;
-const ROUND = ['M1', 'M2', 'M3', 'M4']
-const CARDTYPES = ['A', 'B', 'C', 'D']
-let roundCnt, turnCnt = 0;
-
-let round = [];
-
-//shuffule deck and reset
-function resetDeck() {
-    round = [...ROUND];
-
-    for (let i = round.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [round[i], round[j]] = [round[j], round[i]];
-    }
-
-    console.log("Deck reset:", deck);
-}
-
-function moveOntoNextRound() {
-    if (round.length === 0) {
-        //theoretically this condition is not used.
-        console.log("Deck empty — resetting...");
-        resetDeck();
-    }
-
-    const card = round.shift(); //pick the first card and remove it
-    console.log("Drawn:", card);
-    console.log("Remaining deck:", round);
-
-    return round;
-}
-function drawCard() {
-    card = CARDTYPES[Math.floor(Math.random() * CARDTYPES.length)];
-}
-function undefine() { }
-
-function playRound(metro) {
-    let cat;
-    while (centerCnt < 5 && sideCnt < 5) {
-        cat = platformCat[Math.floor(Math.random() * platformCat.length)];
-        if (cat === 'center') {
-            centerCnt++;
-        } else {
-            sideCnt++;
-        }
-        // choose card
-        card = drawCard();
-        // display platformtype
-        currentCard.textContent = `Extend line to: ${card}`
-        // choose endpoint to extend
-        // choose new station
-        undefine();
-        // draw segment, if user clike "confirm station button". 
-        // check whether the chosen station is valid. If it is invalid, 
-        // skip those step if the user click "skip this round" and continue to the next round.
-        drawSegment();
-        // change the color of the new station. add attribute of the metro
-        markEndPoint();
-        markMiddlePoint();
-        markVisited();
-        // if it is the railway increase the railway score.
-        // move on to next round.
-    }
-}
-
-function playGame() {
-    for (i = 0; i < CARDTYPES.length; i++) {
-        round = moveOntoNextRound();
-        playRound(round);
-        endRound();
-    }
-}
-function endRound() {
-    calRoundResult();
-}
-/*calculate result
-function calRoundResult() {
-
-}
-
-function calResult() {
-
-}*/
-
-
-
-
