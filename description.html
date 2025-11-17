@@ -1,1 +1,289 @@
-<h1>How to play the game</h1>
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Budapest Metro Game – Description</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background: #f4f5f7;
+            color: #222;
+        }
+
+        header {
+            background: #005CA5;
+            color: #fff;
+            padding: 1rem 1.5rem;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.6rem;
+        }
+
+        main {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 1.5rem;
+        }
+
+        h2 {
+            margin-top: 2rem;
+            border-left: 4px solid #005CA5;
+            padding-left: 0.5rem;
+        }
+
+        h3 {
+            margin-top: 1.2rem;
+        }
+
+        ul {
+            padding-left: 1.2rem;
+        }
+
+        code {
+            background: #eee;
+            padding: 0 0.25rem;
+            border-radius: 3px;
+            font-family: Consolas, monospace;
+            font-size: 0.95em;
+        }
+
+        .note {
+            background: #fff8d5;
+            border-left: 4px solid #f1c40f;
+            padding: 0.75rem 1rem;
+            margin: 1rem 0;
+            font-size: 0.95rem;
+        }
+
+        .kbd {
+            display: inline-block;
+            padding: 0.1rem 0.35rem;
+            border-radius: 3px;
+            border: 1px solid #bbb;
+            background: #fafafa;
+            font-family: Consolas, monospace;
+            font-size: 0.9em;
+        }
+
+        .color-sample {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 0.25rem;
+            vertical-align: middle;
+        }
+
+        .m1 {
+            background: #FFD800;
+        }
+
+        .m2 {
+            background: #E41F18;
+        }
+
+        .m3 {
+            background: #005CA5;
+        }
+
+        .m4 {
+            background: #4CA22F;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 0.8rem;
+            color: #666;
+            padding: 1.5rem 0 1rem;
+        }
+
+        @media (max-width: 600px) {
+            main {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>Budapest Metro Building Game – Game Description</h1>
+    </header>
+
+    <main>
+        <section>
+            <h2>Overview</h2>
+            <p>
+                This is a single-player metro-building game inspired by the Budapest metro network.
+                You build four metro lines in four rounds:
+            </p>
+            <ul>
+                <li><span class="color-sample m1"></span>M1 (yellow)</li>
+                <li><span class="color-sample m2"></span>M2 (red)</li>
+                <li><span class="color-sample m3"></span>M3 (blue)</li>
+                <li><span class="color-sample m4"></span>M4 (green)</li>
+            </ul>
+            <p>
+                The order of the lines is randomized. In each round you draw station cards and extend
+                the current metro line to matching stations on a 10×10 grid map of Budapest.
+            </p>
+        </section>
+
+        <section>
+            <h2>Basic Concepts</h2>
+            <ul>
+                <li><strong>Station</strong>: a position on the grid with a type A, B, C, D or Joker (?) from
+                    <code>stations.json</code>.
+                </li>
+                <li><strong>Station card</strong>: one of A, B, C, D, Joker, or Switch.</li>
+                <li><strong>Segment</strong>: one straight line connecting two stations.</li>
+                <li><strong>Metro line</strong>: all segments of the same color (M1–M4).</li>
+                <li><strong>Turn</strong>: draw a station card and optionally build one segment.</li>
+                <li><strong>Round</strong>: build all segments for one metro line.</li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>How a Turn Works</h2>
+            <ol>
+                <li>Press the <span class="kbd">Draw Card</span> button.</li>
+                <li>The current card type (A/B/C/D/Joker/Switch) and platform type (center/side) appears in the sidebar.
+                </li>
+                <li>
+                    Optionally, choose two stations (FROM, then TO) on the map to build a new segment
+                    following the rules below.
+                </li>
+                <li>Press <span class="kbd">Confirm &amp; draw next card</span> to place the segment and proceed.</li>
+                <li>Or press <span class="kbd">Skip this turn</span> if you do not want to build a segment.</li>
+            </ol>
+        </section>
+
+        <section>
+            <h2>Station Selection (FROM / TO)</h2>
+
+            <h3>Selection order</h3>
+            <ul>
+                <li>You always select in this order: <strong>FROM → TO</strong>.</li>
+                <li>First click: choose the <strong>FROM</strong> station.</li>
+                <li>Second click: choose the <strong>TO</strong> station.</li>
+            </ul>
+
+            <h3>Visual feedback</h3>
+            <ul>
+                <li>
+                    The selected <strong>FROM</strong> station is highlighted by a
+                    <strong>yellow outline</strong>.
+                </li>
+                <li>
+                    The selected <strong>TO</strong> station is highlighted with a
+                    <strong>light-blue background</strong>.
+                </li>
+            </ul>
+
+            <h3>How to cancel a selection</h3>
+            <p>
+                You can cancel both selections, but <strong>only in the order TO → FROM</strong>:
+            </p>
+            <ul>
+                <li>When both FROM and TO are selected:</li>
+                <ul>
+                    <li>Click the <strong>TO</strong> station again → the TO selection is cleared.</li>
+                    <li>Then click the <strong>FROM</strong> station again → the FROM selection is cleared.</li>
+                </ul>
+                <li>
+                    You <strong>cannot</strong> clear FROM while a TO is still selected.
+
+                </li>
+            </ul>
+
+            <div class="note">
+                After clearing both FROM and TO, you can start over and select new FROM → TO stations
+                for the current card.
+            </div>
+        </section>
+
+        <section>
+            <h2>Segment Rules</h2>
+            <ul>
+                <li>Segments must be straight: horizontal, vertical, or 45° diagonal.</li>
+                <li>The segment must connect exactly two stations.</li>
+                <li>
+                    The first segment of a round must start from the line’s starting station
+                    (highlighted on the map) and end at a station whose type matches the card
+                    (unless Joker or special rules apply).
+                </li>
+                <li>
+                    Later segments must start from one of the current line’s endpoints
+                    (unless using a Switch card).
+                </li>
+                <li>A segment cannot pass through a third station between its endpoints.</li>
+                <li>Segments cannot cross other segments in open areas — only at stations.</li>
+                <li>
+                    A line cannot visit the same station twice
+                    (unless a special rule like Switch is in effect).
+                </li>
+                <li>
+                    You cannot draw multiple segments between the same two stations,
+                    even for different lines.
+                </li>
+                <li>
+                    Station ID 30 (Deák tér) is a Joker station: any card can connect to it
+                    as long as other rules are respected.
+                </li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Cards</h2>
+            <ul>
+                <li><strong>A / B / C / D</strong>: You may only connect to a station of that type.</li>
+                <li><strong>Joker</strong>: You may connect to any station type.</li>
+                <li>
+                    <strong>Switch</strong>:
+                    allows you to branch from an inner station (not only endpoints),
+                    according to the implementation rules in the game.
+                    After using it for one segment, the effect ends.
+                </li>
+            </ul>
+        </section>
+
+        <section>
+            <h2>Scoring (Simplified)</h2>
+            <p>For each metro line (round), you calculate:</p>
+            <ul>
+                <li><strong>PK</strong>: number of different districts the line passes through.</li>
+                <li><strong>PM</strong>: max number of stations in any single district.</li>
+                <li><strong>PD</strong>: number of Danube crossings (Buda ↔ Pest).</li>
+                <li><strong>Round Score FP</strong>: <code>FP = PK × PM + PD</code></li>
+            </ul>
+            <p>
+                Connecting railway stations increases a railway score along a scale:
+                <code>0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25</code>.
+            </p>
+            <p>
+                At the end of the game, the final score is:
+            </p>
+            <pre>
+Final Score =
+  Sum(FP1 + FP2 + FP3 + FP4)
++ Railway points (PP)
++ 2 × (stations with 2 lines)
++ 5 × (stations with 3 lines)
++ 9 × (stations with 4 lines)</pre>
+        </section>
+    </main>
+
+    <footer>
+        &copy; Budapest Metro Game – Description
+    </footer>
+</body>
+
+</html>

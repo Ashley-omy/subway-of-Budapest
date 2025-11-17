@@ -35,7 +35,7 @@ const TYPE_COLORS = {
 };
 
 // ===============================
-//  ゲーム状態
+//  GameState
 // ===============================
 const gameState = {
     lines: [],
@@ -199,6 +199,21 @@ Promise.all([
 // ===============================
 //  Event Handlers
 // ===============================
+window.addEventListener("load", () => {
+    let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
+    if (history.length === 0) return;
+
+    history.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.time - b.time;
+    });
+
+    const best = history[0];
+
+    document.querySelector("#menuHighScore").textContent =
+        `BEST: ${best.score} pts   (${best.time}s)`;
+});
+
 playerNameInput.addEventListener("input", () => {
     startButton.disabled = playerNameInput.value.trim().length === 0;
 });
@@ -709,9 +724,14 @@ function highlightStation(stationId, color) {
 // ===============================
 //  Round / Finish
 // ===============================
+/*
+PK = Number of districts this line passes through
+PM = Number of stations it touches in the district where it has the most stations
+PD = Number of times it crosses the Danube
+FP = (PK × PM) + PD → this round’s score */
 function endRound() {
     const lineObj = gameState.lineOrder[gameState.currentLineIdx];
-    const roundScore = 0; // TODO: スコアロジック実装時に計算
+    const roundScore = 0;
     gameState.perRoundFP.push(roundScore);
     appendRoundScore(gameState.currentLineIdx, roundScore);
 
@@ -725,16 +745,115 @@ function endRound() {
     confirmBtn.disabled = true;
 
     console.log(`${gameState.currentLineIdx + 1} round ends.`);
+    const lineId = lineObj.id;
+    const visited = gameState.visitedByLine[lineId];
+
+    // --- PK & PM 計算 ---
+    const districtCount = {};
+    visited.forEach(id => {
+        const station = gameState.stations.find(s => s.id == id);
+        const d = station.district;
+        districtCount[d] = (districtCount[d] || 0) + 1;
+    });
+
+    const PK = Object.keys(districtCount).length;
+    const PM = Math.max(...Object.values(districtCount));
+
+    let PD = 0;
+    for (let seg of gameState.segments.filter(s => s.lineId == lineId)) {
+        const a = gameState.stations.find(st => st.id == seg.fromId);
+        const b = gameState.stations.find(st => st.id == seg.toId);
+
+        if (a.side !== b.side) PD++;
+    }
+
+    const FP = PK * PM + PD;
+    gameState.perRoundFP.push(FP);
+
+    updateRoundScores(gameState.currentLineIdx + 1, FP);
+
+    console.log(`Round score FP =`, FP);
+
     startNextRound();
 }
+/*
+Rounds: sum of all FP values → Sum(FP) = (FP1 + FP2 + FP3 + FP4)
+Railway stations: add the final PP (railway points from the track)
+Junctions: We count how many stations are served by two different metro lines (CSP2), how many by three different lines (CSP3), and how many by all four metro lines (CSP4). Junctions with two metro lines are worth 2 points, those with three lines are worth 5 points, and those with four lines are worth 9 points (these are busy hubs, so they earn a bunch of junction points).
+Final score = Sum(FP) + PP + (2 × CSP2) + (5 × CSP3) + (9 × CSP4)
+*/
+function countJunctions() {
+    const stationMap = {}; // stationId → Set(lineId)
+
+    for (const seg of gameState.segments) {
+        if (!stationMap[seg.fromId]) stationMap[seg.fromId] = new Set();
+        if (!stationMap[seg.toId]) stationMap[seg.toId] = new Set();
+
+        stationMap[seg.fromId].add(seg.lineId);
+        stationMap[seg.toId].add(seg.lineId);
+    }
+
+    let CSP2 = 0, CSP3 = 0, CSP4 = 0;
+
+    for (const id in stationMap) {
+        const count = stationMap[id].size;
+        if (count === 2) CSP2++;
+        else if (count === 3) CSP3++;
+        else if (count === 4) CSP4++;
+    }
+
+    return { CSP2, CSP3, CSP4 };
+}
+
+function calResult() {
+    const FPsum = gameState.perRoundFP.reduce((a, b) => a + b, 0);
+
+    // Railway scale
+    const PP = railwayScale[gameState.railwayScoreCounter];
+
+    // Junctions
+    const { CSP2, CSP3, CSP4 } = countJunctions();
+
+    const junctionScore =
+        (2 * CSP2) +
+        (5 * CSP3) +
+        (9 * CSP4);
+
+    const finalScore = FPsum + PP + junctionScore;
+    const elapsed = Math.floor((Date.now() - startTime) / 1000);
+
+    // 最終スコアを UI に表示（ゲーム画面側）
+    document.querySelector("#finalScore").textContent =
+        `Final Score: ${finalScore}`;
+
+    return {
+        score: finalScore,
+        time: elapsed
+    };
+}
+
 
 function finishGame() {
     stopTimer();
 
-    const sumFP = gameState.perRoundFP.reduce((a, b) => a + b, 0);
-    const railwayPoints = 0;
-    const junctionPoints = 0; // TODO: 実装
+    // --- 最終スコア計算 ---
+    const finalScore = calResult();
 
-    const total = sumFP + railwayPoints + junctionPoints;
-    finalScoreBox.textContent = `FinalScore: ${total}`;
+    // --- localStorage 保存 ---
+    let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
+    history.push({
+        score: result.score,
+        time: result.time,
+        date: new Date().toLocaleString()
+    });
+
+    // スコア降順、同スコアの場合は時間昇順
+    history.sort((a, b) => {
+        if (b.score !== a.score) return b.score - a.score;
+        return a.time - b.time;
+    });
+
+    localStorage.setItem("scoreHistory", JSON.stringify(history));
+
+    showFinalResult(result, history);
 }
