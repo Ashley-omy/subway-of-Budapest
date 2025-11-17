@@ -114,7 +114,7 @@ function updateCurrentCard(cardType) {
     }
 }
 
-function appendRoundScore(roundIndex, score) {
+function updateRoundScores(roundIndex, score) {
     const div = document.createElement("div");
     div.textContent = `round ${roundIndex + 1}: ${score}`;
     roundScoresBox.appendChild(div);
@@ -203,15 +203,19 @@ window.addEventListener("load", () => {
     let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
     if (history.length === 0) return;
 
+    // スコア降順、同点なら時間の短い順
     history.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return a.time - b.time;
     });
 
-    const best = history[0];
+    const menuHighScore = document.querySelector("#menuHighScore");
 
-    document.querySelector("#menuHighScore").textContent =
-        `BEST: ${best.score} pts   (${best.time}s)`;
+    history.forEach((log) => {
+        const div = document.createElement("div");
+        div.textContent = `BEST: ${log.score} pts (${log.time}s)`;
+        menuHighScore.appendChild(div);
+    });
 });
 
 playerNameInput.addEventListener("input", () => {
@@ -488,7 +492,6 @@ function endTurn() {
     gameState.turn++;
     turn.textContent = `turn: ${gameState.turn}`;
 
-
     gameState.awaitingPlacement = false;
     gameState.selectedFrom = null;
     gameState.selectedTo = null;
@@ -733,7 +736,6 @@ function endRound() {
     const lineObj = gameState.lineOrder[gameState.currentLineIdx];
     const roundScore = 0;
     gameState.perRoundFP.push(roundScore);
-    appendRoundScore(gameState.currentLineIdx, roundScore);
 
     gameState.currentLineIdx++;
     gameState.roundShouldEnd = false;
@@ -809,7 +811,7 @@ function calResult() {
     const FPsum = gameState.perRoundFP.reduce((a, b) => a + b, 0);
 
     // Railway scale
-    const PP = railwayScale[gameState.railwayScoreCounter];
+    const PP = gameState.railwayScale[gameState.railwayScoreCounter];
 
     // Junctions
     const { CSP2, CSP3, CSP4 } = countJunctions();
@@ -832,7 +834,6 @@ function calResult() {
     };
 }
 
-
 function finishGame() {
     stopTimer();
 
@@ -842,8 +843,8 @@ function finishGame() {
     // --- localStorage 保存 ---
     let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
     history.push({
-        score: result.score,
-        time: result.time,
+        score: finalScore.score,
+        time: finalScore.time,
         date: new Date().toLocaleString()
     });
 
@@ -855,5 +856,5 @@ function finishGame() {
 
     localStorage.setItem("scoreHistory", JSON.stringify(history));
 
-    showFinalResult(result, history);
+    //showFinalResult(result, history);
 }
