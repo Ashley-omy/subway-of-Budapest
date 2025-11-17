@@ -38,6 +38,7 @@ const TYPE_COLORS = {
 //  GameState
 // ===============================
 const gameState = {
+    playerName: null,
     lines: [],
     stations: [],
     lineOrder: [],
@@ -203,17 +204,17 @@ window.addEventListener("load", () => {
     let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
     if (history.length === 0) return;
 
-    // スコア降順、同点なら時間の短い順
-    history.sort((a, b) => {
-        if (b.score !== a.score) return b.score - a.score;
-        return a.time - b.time;
-    });
+    // // スコア降順、同点なら時間の短い順
+    // history.sort((a, b) => {
+    //     if (b.score !== a.score) return b.score - a.score;
+    //     return a.time - b.time;
+    // });
 
     const menuHighScore = document.querySelector("#menuHighScore");
 
     history.forEach((log) => {
         const div = document.createElement("div");
-        div.textContent = `BEST: ${log.score} pts (${log.time}s)`;
+        div.textContent = `name: ${log.name}, Score: ${log.score} pts (${log.time}s)`;
         menuHighScore.appendChild(div);
     });
 });
@@ -228,7 +229,7 @@ startButton.addEventListener("click", () => {
         return;
     }
 
-    const playerName = playerNameInput.value.trim();
+    playerName = playerNameInput.value.trim();
     playerNameDisplay.textContent = `player: ${playerName}`;
 
     menuDiv.style.display = "none";
@@ -843,6 +844,7 @@ function finishGame() {
     // --- localStorage 保存 ---
     let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
     history.push({
+        name: playerName,
         score: finalScore.score,
         time: finalScore.time,
         date: new Date().toLocaleString()
