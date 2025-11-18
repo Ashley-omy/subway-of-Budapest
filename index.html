@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="subway.css" />
 
 </head>
+<header>
+    <h1>Subway Of Budapest</h1>
+    <div id="playerNameDisplay"></div>
+</header>
 
 <body>
     <div id="menuDiv">
@@ -20,13 +24,38 @@
     </div>
 
     <div id="gameDiv" style="display: none;">
+        <div id="description">
+            <h2>Symbols</h2>
+            <ul>
+                <li>Each metro line’s <strong>starting station</strong> is outlined in its respective line color.</li>
+                <li>Black squares &#40 ■ &#41 represent <strong>railway stations.</strong></li>
+            </ul>
+            <h2>How to draw a segment</h2>
+            <ul>
+                <li>You always select in this order: <strong>FROM → TO</strong>.</li>
+                <li>First click: choose the <strong>FROM</strong> station.</li>
+                <li>Second click: choose the <strong>TO</strong> station.</li>
+                <li>
+                    The selected <strong>FROM</strong> station is highlighted by a
+                    <strong style="background-color: orange;">orange outline</strong>.
+                </li>
+                <li>
+                    The selected <strong>TO</strong> station is highlighted with a
+                    <strong style="background-color: lightskyblue;">light-blue outline</strong>.
+                </li>
+                <li>You can <strong>cancel selections</strong> by cliking the stations again, but <strong>only in
+                        the
+                        order TO →
+                        FROM</strong> You <strong>cannot</strong> clear FROM while a TO is still selected.</li>
+                <li>Press <i>"Confirm Segment" button</i> to draw a line.</li>
+        </div>
+
         <div id="gridContainer">
             <table id="grid"></table>
             <svg id="segmentsLayer"></svg>
         </div>
 
         <div id="sidebar">
-            <div id="playerNameDisplay"></div>
             <div id="timer">Elapsed Time: 0s</div>
             <div id="currentCard">currentCard: -</div>
             <div id="platformType">platform: </div>
@@ -39,7 +68,7 @@
                 <button id="drawCardBtn" disabled>Draw Card</button>
                 <div id="error"></div>
                 <div id="message"></div>
-                <button id="confirmStation" disabled>Confirm Station</button>
+                <button id="confirmStation" disabled>Confirm Segment</button>
                 <button id="skipRound" disabled>skip this turn</button>
             </div>
 

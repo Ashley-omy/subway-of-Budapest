@@ -22,7 +22,7 @@ const finalScoreBox = document.querySelector("#finalScore");
 const roundScoresBox = document.querySelector("#roundScores");
 
 // ===============================
-//  ゲーム用定数
+//  Constant
 // ===============================
 const GRID_SIZE = 10;
 const CELL_SIZE = 60;
@@ -117,7 +117,7 @@ function updateCurrentCard(cardType) {
 
 function updateRoundScores(roundIndex, score) {
     const div = document.createElement("div");
-    div.textContent = `round ${roundIndex + 1}: ${score}`;
+    div.textContent = ` round ${roundIndex}: ${score}`;
     roundScoresBox.appendChild(div);
 }
 
@@ -204,12 +204,6 @@ window.addEventListener("load", () => {
     let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
     if (history.length === 0) return;
 
-    // // スコア降順、同点なら時間の短い順
-    // history.sort((a, b) => {
-    //     if (b.score !== a.score) return b.score - a.score;
-    //     return a.time - b.time;
-    // });
-
     const menuHighScore = document.querySelector("#menuHighScore");
 
     history.forEach((log) => {
@@ -234,6 +228,7 @@ startButton.addEventListener("click", () => {
 
     menuDiv.style.display = "none";
     gameDiv.style.display = "flex";
+
 
     initRoundOrder();
     startTimer();
@@ -278,7 +273,6 @@ skipTurnBtn.addEventListener("click", () => {
         return;
     }
 
-    gameState.turn++;
     turn.textContent = `turn: ${gameState.turn}`;
     errorBox.textContent = "Turn skipped.";
 
@@ -747,7 +741,7 @@ function endRound() {
     skipTurnBtn.disabled = true;
     confirmBtn.disabled = true;
 
-    console.log(`${gameState.currentLineIdx + 1} round ends.`);
+    console.log(`${gameState.currentLineIdx} round ends.`);
     const lineId = lineObj.id;
     const visited = gameState.visitedByLine[lineId];
 
@@ -773,7 +767,7 @@ function endRound() {
     const FP = PK * PM + PD;
     gameState.perRoundFP.push(FP);
 
-    updateRoundScores(gameState.currentLineIdx + 1, FP);
+    updateRoundScores(gameState.currentLineIdx, FP);
 
     console.log(`Round score FP =`, FP);
 
@@ -837,11 +831,9 @@ function calResult() {
 
 function finishGame() {
     stopTimer();
-
-    // --- 最終スコア計算 ---
     const finalScore = calResult();
 
-    // --- localStorage 保存 ---
+    // --- Save to localStorage--
     let history = JSON.parse(localStorage.getItem("scoreHistory") || "[]");
     history.push({
         name: playerName,
@@ -850,7 +842,7 @@ function finishGame() {
         date: new Date().toLocaleString()
     });
 
-    // スコア降順、同スコアの場合は時間昇順
+    // sort scores in descending order. If scores are same, order based on times.
     history.sort((a, b) => {
         if (b.score !== a.score) return b.score - a.score;
         return a.time - b.time;
