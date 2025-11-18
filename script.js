@@ -20,6 +20,8 @@ const errorBox = document.querySelector("#error");
 const messageBox = document.querySelector("#message");
 const finalScoreBox = document.querySelector("#finalScore");
 const roundScoresBox = document.querySelector("#roundScores");
+const sideCnt = document.querySelector("#sideCnt");
+const centerCnt = document.querySelector("#centerCnt");
 
 // ===============================
 //  Constant
@@ -117,7 +119,7 @@ function updateCurrentCard(cardType) {
 
 function updateRoundScores(roundIndex, score) {
     const div = document.createElement("div");
-    div.textContent = ` round ${roundIndex}: ${score}`;
+    div.textContent = `   round ${roundIndex}: ${score}`;
     roundScoresBox.appendChild(div);
 }
 
@@ -308,6 +310,9 @@ function startNextRound() {
     gameState.currentCard = null;
     gameState.isSwitch = false;
 
+    sideCnt.textContent = `sideCnt: ${gameState.sidePlatformCount}`;
+    centerCnt.textContent = `centerCnt: ${gameState.centerPlatformCount}`;
+
     initDeck();
     startRound(lineObj);
 
@@ -366,6 +371,9 @@ function drawCard() {
     console.log(`round ${gameState.currentLineIdx}: center platform cnt: ${gameState.centerPlatformCount}`);
     if (card.platform === "side") gameState.sidePlatformCount++;
     console.log(`round ${gameState.currentLineIdx}: side platform cnt: ${gameState.sidePlatformCount}`);
+
+    centerCnt.textContent = `centerCnt: ${gameState.centerPlatformCount}`;
+    sideCnt.textContent = `sideCnt: ${gameState.sidePlatformCount}`;
 
     updateCurrentCard(card.type);
 
@@ -471,13 +479,28 @@ function confirmSegment() {
     const from = gameState.selectedFrom;
     const to = gameState.selectedTo;
 
-    if (!from || !to) {
+    console.log(`Try to connect from: ${from}-> to: ${to}`);
+    console.log();
+
+    /*This code recognize station id:0 as null */
+    // if (!from || !to) {
+    //     errorBox.textContent = "Select FROM and TO stations first.";
+    //     return;
+    // }
+
+    if (from === null || to === null) {
         errorBox.textContent = "Select FROM and TO stations first.";
         return;
     }
 
     const ok = attemptPlaceSegment(from, to);
     if (!ok) return;
+
+    const el = document.querySelector(`div[data-id="${from}"]`);
+    if (el) el.classList.remove("selected-from");
+
+    const el1 = document.querySelector(`div[data-id="${to}"]`);
+    if (el1) el1.classList.remove("selected-to");
 
     endTurn();
 }
@@ -486,6 +509,8 @@ function endTurn() {
     console.log(`${gameState.turn} turn ends.`);
     gameState.turn++;
     turn.textContent = `turn: ${gameState.turn}`;
+    platformType.textContent = "platform: ";
+    currentCard.textContent = "currentCard: ";
 
     gameState.awaitingPlacement = false;
     gameState.selectedFrom = null;
@@ -709,7 +734,7 @@ function placeSegment(lineId, fromId, toId) {
         railWayScore.textContent =
             `RailwayScore: ${gameState.railwayScale[gameState.railwayScoreCounter]}`
     }
-    highlightStation(toId, TYPE_COLORS[lineId]);
+    //highlightStation(toId, TYPE_COLORS[lineId]);
     drawSegmentSvg(lineId, fromId, toId);
 }
 

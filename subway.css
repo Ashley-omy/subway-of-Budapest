@@ -104,11 +104,8 @@ h2 {
 #gridContainer {
     position: relative;
     width: 600px;
-    /* ← ここ重要 */
     height: 600px;
-    /* ← ここ重要 */
     display: block;
-    /* inline-block を外す */
 }
 
 #description {
