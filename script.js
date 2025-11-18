@@ -12,7 +12,8 @@ const playerNameDisplay = document.querySelector("#playerNameDisplay");
 const currentRound = document.querySelector("#currentRound");
 const currentCard = document.querySelector("#currentCard");
 const turn = document.querySelector("#turn");
-const skipTurnBtn = document.querySelector("#skipRound");
+const skipTurnBtn = document.querySelector("#skipTurn");
+const skipRoundBtn = document.querySelector("#skipRound");
 const railWayScore = document.querySelector("#railWayScore");
 const platformType = document.querySelector("#platformType");
 const drawCardBtn = document.querySelector("#drawCardBtn");
@@ -119,7 +120,7 @@ function updateCurrentCard(cardType) {
 
 function updateRoundScores(roundIndex, score) {
     const div = document.createElement("div");
-    div.textContent = `   round ${roundIndex}: ${score}`;
+    div.innerHTML = `<span style="display:inline-block;width:20px;"></span>round ${roundIndex}: ${score}`;
     roundScoresBox.appendChild(div);
 }
 
@@ -175,7 +176,7 @@ function drawGrid(size, stations, lines) {
         table.appendChild(tr);
     }
 
-    // SVG サイズ調整（セルサイズ × グリッド）
+    // SVG size adjustment（cell size × grid）
     segmentsSvg.setAttribute("width", CELL_SIZE * GRID_SIZE);
     segmentsSvg.setAttribute("height", CELL_SIZE * GRID_SIZE);
 }
@@ -214,6 +215,10 @@ window.addEventListener("load", () => {
         menuHighScore.appendChild(div);
     });
 });
+
+skipRoundBtn.addEventListener("click", () => {
+    endRound();
+})
 
 playerNameInput.addEventListener("input", () => {
     startButton.disabled = playerNameInput.value.trim().length === 0;
@@ -731,12 +736,23 @@ function placeSegment(lineId, fromId, toId) {
             gameState.railwayScoreCounter + 1,
             10
         );
-        railWayScore.textContent =
-            `RailwayScore: ${gameState.railwayScale[gameState.railwayScoreCounter]}`
+        updateRailwayScoreDisplay();
     }
     //highlightStation(toId, TYPE_COLORS[lineId]);
     drawSegmentSvg(lineId, fromId, toId);
 }
+function updateRailwayScoreDisplay() {
+    const scale = gameState.railwayScale;  // [0,1,2,4,...]
+    const idx = gameState.railwayScoreCounter;
+
+    railWayScore.innerHTML = `
+        RailwayScore:
+        ${scale.map((v, i) =>
+        `<span class="${i === idx ? 'active' : ''}">${v}</span>`
+    ).join(' ')}
+    `;
+}
+
 
 function highlightStation(stationId, color) {
     const el = document.querySelector(`div[data-id="${stationId}"]`);
@@ -770,17 +786,18 @@ function endRound() {
     const lineId = lineObj.id;
     const visited = gameState.visitedByLine[lineId];
 
-    // --- PK & PM 計算 ---
+    // --- calculate round score ---
     const districtCount = {};
     visited.forEach(id => {
         const station = gameState.stations.find(s => s.id == id);
         const d = station.district;
         districtCount[d] = (districtCount[d] || 0) + 1;
     });
-
+    // Number of districts covered
     const PK = Object.keys(districtCount).length;
+    //Maximum number of stations in a single district 
     const PM = Math.max(...Object.values(districtCount));
-
+    //Number of Danube crossings
     let PD = 0;
     for (let seg of gameState.segments.filter(s => s.lineId == lineId)) {
         const a = gameState.stations.find(st => st.id == seg.fromId);
@@ -790,6 +807,7 @@ function endRound() {
     }
 
     const FP = PK * PM + PD;
+    console.log(`round score: FP = PK * PD = ${PK}*${PM}+${PD} = FP`)
     gameState.perRoundFP.push(FP);
 
     updateRoundScores(gameState.currentLineIdx, FP);
@@ -842,6 +860,7 @@ function calResult() {
         (9 * CSP4);
 
     const finalScore = FPsum + PP + junctionScore;
+    updateFinalBreakdown({ FPsum, PP, CSP2, CSP3, CSP4, junctionScore, finalScore });
     const elapsed = Math.floor((Date.now() - startTime) / 1000);
 
     // 最終スコアを UI に表示（ゲーム画面側）
@@ -872,8 +891,31 @@ function finishGame() {
         if (b.score !== a.score) return b.score - a.score;
         return a.time - b.time;
     });
-
+    skipRoundBtn.disabled = true;
     localStorage.setItem("scoreHistory", JSON.stringify(history));
 
     //showFinalResult(result, history);
+}
+function updateFinalBreakdown(result) {
+    const {
+        FPsum, PP,
+        CSP2, CSP3, CSP4,
+        junctionScore, finalScore
+    } = result;
+
+    document.querySelector("#break_FP").innerHTML =
+        `• FP (round total): <strong>${FPsum}</strong>`;
+
+    document.querySelector("#break_PP").innerHTML =
+        `• Railway score (PP): <strong>${PP}</strong>`;
+
+    document.querySelector("#break_Junctions").innerHTML =
+        `• Junctions: 
+        <br>&nbsp;&nbsp;- 2-line stations (CSP2): ${CSP2} × 2 = <strong>${CSP2 * 2}</strong>
+        <br>&nbsp;&nbsp;- 3-line stations (CSP3): ${CSP3} × 5 = <strong>${CSP3 * 5}</strong>
+        <br>&nbsp;&nbsp;- 4-line stations (CSP4): ${CSP4} × 9 = <strong>${CSP4 * 9}</strong>
+        <br>Total junction score: <strong>${junctionScore}</strong>`;
+
+    document.querySelector("#break_total").innerHTML =
+        `TOTAL SCORE = <strong>${finalScore}</strong>`;
 }

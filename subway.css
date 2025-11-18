@@ -34,6 +34,10 @@ h2 {
     font-size: large;
 }
 
+#skipRound {
+    width: 130px;
+}
+
 /*grid design*/
 #grid td {
     width: 60px;
@@ -171,4 +175,15 @@ h2 {
 #finalScore {
     font-size: 1.5rem;
     font-weight: bold;
+}
+
+#railWayScore span {
+    margin-right: 6px;
+    color: #7c7c7c;
+}
+
+#railWayScore .active {
+    font-weight: bold;
+    font-size: 1.3em;
+    color: black;
 }

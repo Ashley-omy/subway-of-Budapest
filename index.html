@@ -64,17 +64,26 @@
             <div id="currentRound">Metro: </div>
             <div id="turn">turn: -</div>
             <div id="roundScores">RoundScores:</div>
-            <div id="railWayScore">railWayScore: </div>
+            <div id="railWayScore">RailwayScore: <span>0, 1, 2, 4, 6, 8, 11, 14, 17, 21, 25</span>
+            </div>
 
             <div id="stationControls">
                 <button id="drawCardBtn" disabled>Draw Card</button>
                 <div id="error"></div>
                 <div id="message"></div>
                 <button id="confirmStation" disabled>Confirm Segment</button>
-                <button id="skipRound" disabled>skip this turn</button>
+                <button id="skipTurn" disabled>skip this turn</button>
             </div>
+            <button id="skipRound">skip this round</button>
 
             <div id="finalScore">FinalScore: </div>
+            <div id="finalBreakdown" style="margin-top:15px;">
+                <div id="break_FP"></div>
+                <div id="break_PP"></div>
+                <div id="break_Junctions"></div>
+                <div id="break_total" style="margin-top:10px;font-weight:bold;"></div>
+            </div>
+
         </div>
     </div>
 
