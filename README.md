@@ -1,7 +1,9 @@
 # Subway of Budapest 
 
-## Play Game from this link!: 
+## Play Game from this link!
 https://ashley-omy.github.io/subway-of-Budapest/
+
+---
 
 ## Overview
 
