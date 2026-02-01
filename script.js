@@ -356,6 +356,7 @@ function initDeck() {
     ];
 
     gameState.deck = shuffle(cards);
+    console.log(gameState.deck);
 }
 
 // ===============================
@@ -752,7 +753,6 @@ function updateRailwayScoreDisplay() {
     ).join(' ')}
     `;
 }
-
 
 function highlightStation(stationId, color) {
     const el = document.querySelector(`div[data-id="${stationId}"]`);
